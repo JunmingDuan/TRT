@@ -2,7 +2,7 @@
 
 make -j;
 #for n in 10 20 40 80;
-for n in 10;
+for n in 1;
 do
 ./main $n 0 1;
 done

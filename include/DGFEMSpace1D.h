@@ -75,6 +75,7 @@ double temperature_denominator(const double T,
     void solve_leqn(const EMAT&, const EVEC&, EVEC&);
     void run_unsteady(func, func, func, func, double t_end);
     //int judge_positivity(const SOL&);
+    double cal_norm_I(const SOL& s1, const SOL& s2, int n);
     double cal_norm(const SOL&, const SOL&, const VEC<EVEC>&, const VEC<EVEC>&, int);
     double cal_err(const SOL& s1, int n, double t_end);
     void print_DG_coe(std::ostream&);
