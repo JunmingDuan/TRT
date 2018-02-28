@@ -3,7 +3,7 @@
 //number of the integral rule in light direction
 u_int M = 1;
 //number of basis function
-u_int K = 1;
+u_int K = 5;
 //0 for ghost = 0, 1 for flux = 0, 2 for period BD
 //ex9
 u_int BDL = 1; u_int BDR = 1;
@@ -17,7 +17,7 @@ double Nt_Ftol = 1e-14;
 //const double tol = 1e-13;
 double tol = 1e-14;
 //tol for steady solution solver
-double TOL = 1e-10;
+double TOL = 1e-14;
 //eps for scaling_limiter
 double EPS = 1e-13;
 //Cv number

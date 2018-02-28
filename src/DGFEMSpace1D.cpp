@@ -226,7 +226,7 @@ void DGFEMSpace1D::init(func I0, funcT T0) {
 }
 
 double DGFEMSpace1D::cal_dt(const SOL& I) {
-  return 1e-0;
+  return 1e-3;
 }
 
 int DGFEMSpace1D::forward_one_step_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>& Tn, const VEC<EVEC>& T,
@@ -245,7 +245,7 @@ double DGFEMSpace1D::material_coe(const double T, const double Tn,
     const double dt, const double st) {
   double tmp1 = -1.5*a*c*st*pow(T,4);
   double tmp2 = Tn - sum_wm*dt/Cv*tmp1;
-  return tmp1 + st*tmp2;
+  return tmp1 + 2*a*c*st*pow(T,3)/(1+sum_wm*dt/Cv*2*a*c*st*pow(T,3))*tmp2;
 }
 
 void DGFEMSpace1D::RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>& Tn, const VEC<EVEC>& T,
@@ -272,9 +272,6 @@ void DGFEMSpace1D::RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>&
         //else { rhs = mu[m]*BDRL_mat*I_new[i-1][m]; }
         //time direvative
         rhs += (1./(c*dt)*QUADINFO[i].l2g_jacobian())*absorb_mat*In[i][m];
-        std::cout << "##################" << std::endl;
-        std::cout << "time direvative" << std::endl;
-        std::cout << rhs[0] << std::endl;
         //sigma_t*I and material, integral
         for(u_int g = 0; g < x.size(); ++g) {
           V = Poly(x[g]);
@@ -287,8 +284,6 @@ void DGFEMSpace1D::RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>&
             rhs[k] += material_coe(Tg, Tng, dt, st)
               *V[k]*w[g]*QUADINFO[i].l2g_jacobian();
           }
-          std::cout << "material temperature" << std::endl;
-          std::cout << rhs[0] << std::endl;
           //scattering
           for(u_int wm = 0; wm < wgt.size(); ++wm) {
             for(u_int k = 0; k < K; ++k) {
@@ -297,8 +292,6 @@ void DGFEMSpace1D::RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>&
                 *V[k]*w[g]*QUADINFO[i].l2g_jacobian();
             }
           }
-          std::cout << "scattering" << std::endl;
-          std::cout << rhs[0] << std::endl;
           //I^{n+1} and sigma_t*I
           Q = 1./(c*dt)+st;
           for(u_int k = 0; k < K; ++k) {
@@ -306,17 +299,9 @@ void DGFEMSpace1D::RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>&
               A(k,j) += Q*V[j]*V[k]*w[g]*QUADINFO[i].l2g_jacobian();
             }
           }
-          std::cout << "I^{n+1} and sigma_t*I" << std::endl;
-          std::cout << A << std::endl;
-          std::cout << "##################" << std::endl;
         }
 
         solve_leqn(A, rhs, I_new[i][m]);
-        std::cout << "############Tn[0],T[0],In,I,I_new[0]###########" << std::endl;
-        std::cout << Tn[0] << " " << T[0] << " ";
-        std::cout << In[0] << " " << I[0] << " ";
-        std::cout << I_new[0] << std::endl;
-        abort();
 
       }
     }
@@ -426,8 +411,9 @@ void DGFEMSpace1D::run_unsteady(func sigma_t, func q, func BL, func BR, double t
   int ite(0), ite_I(0), is_pp(0), circle(0);
   double t(0), dt(0), dtt(0), res(1), res_I(1);
   In = I; Tn = T;
-  std::cout << "Conservation: " << 2./c*Composition(I,0,0.5*(mesh[0]+mesh[1]))[0]
-    +Cv*Composition(T,0, 0.5*(mesh[0]+mesh[1]))<< std::endl;
+  //std::cout << "Conservation: " << 2./c*Composition(I,0,0.5*(mesh[0]+mesh[1]))[0]
+    //+Cv*Composition(T,0, 0.5*(mesh[0]+mesh[1]))<< std::endl;
+  VEC<double> Lt, mT;
   while ( t < t_end ) {
     dt = cal_dt(I);
     dt = std::min(dt, t_end-t);
@@ -451,25 +437,24 @@ void DGFEMSpace1D::run_unsteady(func sigma_t, func q, func BL, func BR, double t
           res_I = cal_norm_I(I, I1, 10);
           I = I1;
           ite_I++;
-          std::cout << "ite_I: " << ite_I << ", err: ";
-          std::cout << res_I << std::endl;
+          //std::cout << "ite_I: " << ite_I << ", err: ";
+          //std::cout << res_I << std::endl;
         }
         temperature(I, Tn, T, dt, sigma_t, T1);
         res = cal_norm(I, I1, T, T1, 10);
         T = T1;
         ite++;
-        std::cout << "ite: " << ite << ", err: ";
-        std::cout << res << std::endl;
+        //std::cout << "ite: " << ite << ", err: ";
+        //std::cout << res << std::endl;
       }
     }
     t += dt;
     In = I; Tn = T;
     //std::cout << "dt: " << dt << ", t: " << t << std::endl;
-    std::cout << "dt: " << dt << ", t: " << t << "\t";
-    std::cout << Composition(T, 0, 0.5*(mesh[0]+mesh[1])) << "\t";
-    std::cout << Composition(I, 0, 0.5*(mesh[0]+mesh[1])) << std::endl;
-    std::cout << "Conservation: " << 2./c*Composition(I,0,0.5*(mesh[0]+mesh[1]))[0]
-      +Cv*Composition(T,0, 0.5*(mesh[0]+mesh[1]))<< std::endl;
+    Lt.push_back(t);
+    mT.push_back(Composition(T, 0, 0.5*(mesh[0]+mesh[1])));
+    //std::cout << "Conservation: " << 2./c*Composition(I,0,0.5*(mesh[0]+mesh[1]))[0]
+      //+Cv*Composition(T,0, 0.5*(mesh[0]+mesh[1]))<< std::endl;
   }
   //std::cout << "err1, err2, errf:\n"
     //<< cal_err(I, 1, t_end) << "\t"
@@ -479,6 +464,16 @@ void DGFEMSpace1D::run_unsteady(func sigma_t, func q, func BL, func BR, double t
     //std::cout << Composition(T, i, 0.5*(mesh[i]+mesh[i+1])) << "\t";
   //}
   //std::cout << std::endl;
+  std::ofstream out("t-T");
+  out.precision(16);
+  out << std::showpos;
+  out.setf(std::ios::scientific);
+  for(u_int j = 0; j < Lt.size(); ++j) {
+    out << Lt[j] << " " << mT[j] << "\n";
+  }
+  out << std::endl;
+  out.close();
+
 }
 
 

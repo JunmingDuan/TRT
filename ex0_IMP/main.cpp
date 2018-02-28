@@ -13,29 +13,22 @@
 
 double I0(const double mu, const double x, const double t) {
   return 0.5*a*c*pow(2,4);
-  //return 0.5*a*c*pow(T0(x,t),4);
 }
 
 double T0(const double x, const double t) {
   return 1e-3;
-  //if(x < 0.1) return 1;
-  //else return 1e-9;
 }
 
 double BL(const double mu, const double x, const double t) {
   return 0;
-  //return pow(mu,2)*pow(cos(M_PI*t),4);
-  //return t;
 }
 
 double BR(const double mu, const double x, const double t) {
   return 0;
-  //return 1+t;
 }
 
 double sigma_t(const double mu, const double T, const double x) {
   return 1;
-  //return 300.0/pow(T,3);
 }
 
 double q(const double mu, const double x, const double t) {
@@ -62,7 +55,7 @@ int main(int argc, char *argv[]) {
   Problem.init(I0, T0);
   std::cout << "Start to solve ..." << std::endl;
   t1 = clock();
-  Problem.run_unsteady(sigma_t, q, BL, BR, 1e-0);
+  Problem.run_unsteady(sigma_t, q, BL, BR, 4e-1);
   std::cout << "Finished ..." << std::endl;
   t2 = clock();
   std::stringstream s;
