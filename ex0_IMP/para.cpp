@@ -3,7 +3,7 @@
 //number of the integral rule in light direction
 u_int M = 1;
 //number of basis function
-u_int K = 5;
+u_int K = 1;
 //0 for ghost = 0, 1 for flux = 0, 2 for period BD
 //ex9
 u_int BDL = 1; u_int BDR = 1;
@@ -24,4 +24,5 @@ double EPS = 1e-13;
 double Cv = 1;
 //double Cv = 0.3e16;
 double a = 1;
-
+//double c = 3e8;
+double c = 1;

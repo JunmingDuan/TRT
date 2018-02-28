@@ -226,7 +226,8 @@ void DGFEMSpace1D::init(func I0, funcT T0) {
 }
 
 double DGFEMSpace1D::cal_dt(const SOL& I) {
-  return 1e-3;
+  return 5.75e-5;
+  //return 5e-3;
 }
 
 int DGFEMSpace1D::forward_one_step_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>& Tn, const VEC<EVEC>& T,
@@ -265,11 +266,11 @@ void DGFEMSpace1D::RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>&
         A.setZero();
         rhs.setZero();
         //build matrix, outgoing and spacial prime
-        //A = mu[m]*BDRR_mat
-          //- (mu[m])*prime_mat;//g2l_jab given by prime is eliminated by the l2g_jab given byintegral transformation
+        A = mu[m]*BDRR_mat
+          - (mu[m])*prime_mat;//g2l_jab given by prime is eliminated by the l2g_jab given byintegral transformation
         //inflow
-        //if(i == 0) { rhs = mu[m]*BD_L[m]; }
-        //else { rhs = mu[m]*BDRL_mat*I_new[i-1][m]; }
+        if(i == 0) { rhs = mu[m]*BD_L[m]; }
+        else { rhs = mu[m]*BDRL_mat*I_new[i-1][m]; }
         //time direvative
         rhs += (1./(c*dt)*QUADINFO[i].l2g_jacobian())*absorb_mat*In[i][m];
         //sigma_t*I and material, integral
@@ -318,7 +319,7 @@ void DGFEMSpace1D::RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>&
           - (mu[m])*prime_mat;//g2l_jab given by prime is eliminated by the l2g_jab given byintegral transformation
         //inflow
         if(i == Nx-1) { rhs = -mu[m]*BD_R[m]; }
-        else { rhs = mu[m]*BDLR_mat*I_new[i+1][m]; }
+        else { rhs = - mu[m]*BDLR_mat*I_new[i+1][m]; }
         //time direvative
         rhs += (1./(c*dt)*QUADINFO[i].l2g_jacobian())*absorb_mat*In[i][m];
         //sigma_t*I and material, integral
@@ -400,6 +401,12 @@ void DGFEMSpace1D::temperature(const SOL& I_new, const VEC<EVEC>& Tn,
       }
     }
     solve_leqn(A, rhs, T_new[i]);
+    if( T_new[i][0] < 0) {
+      std::cout << "Negative temperature!" << std::endl;
+      std::cout << "i,T_new[i]: " << "\n";
+      std::cout << T_new[i] << std::endl;
+      abort();
+    }
     //std::cout << "############Tn[0],T[0],I_new[0]###########" << std::endl;
     //std::cout << Tn[0] << " " << T[0] << " " << I_new[0] << std::endl;
     //std::cout << T_new[0] << std::endl;
@@ -437,22 +444,22 @@ void DGFEMSpace1D::run_unsteady(func sigma_t, func q, func BL, func BR, double t
           res_I = cal_norm_I(I, I1, 10);
           I = I1;
           ite_I++;
-          //std::cout << "ite_I: " << ite_I << ", err: ";
-          //std::cout << res_I << std::endl;
+          std::cout << "ite_I: " << ite_I << ", err: ";
+          std::cout << res_I << std::endl;
         }
         temperature(I, Tn, T, dt, sigma_t, T1);
         res = cal_norm(I, I1, T, T1, 10);
         T = T1;
         ite++;
-        //std::cout << "ite: " << ite << ", err: ";
-        //std::cout << res << std::endl;
+        std::cout << "ite: " << ite << ", err: ";
+        std::cout << res << std::endl;
       }
     }
     t += dt;
     In = I; Tn = T;
-    //std::cout << "dt: " << dt << ", t: " << t << std::endl;
-    Lt.push_back(t);
-    mT.push_back(Composition(T, 0, 0.5*(mesh[0]+mesh[1])));
+    std::cout << "dt: " << dt << ", t: " << t << std::endl;
+    //Lt.push_back(t);
+    //mT.push_back(Composition(T, 0, 0.5*(mesh[0]+mesh[1])));
     //std::cout << "Conservation: " << 2./c*Composition(I,0,0.5*(mesh[0]+mesh[1]))[0]
       //+Cv*Composition(T,0, 0.5*(mesh[0]+mesh[1]))<< std::endl;
   }
@@ -464,15 +471,16 @@ void DGFEMSpace1D::run_unsteady(func sigma_t, func q, func BL, func BR, double t
     //std::cout << Composition(T, i, 0.5*(mesh[i]+mesh[i+1])) << "\t";
   //}
   //std::cout << std::endl;
-  std::ofstream out("t-T");
-  out.precision(16);
-  out << std::showpos;
-  out.setf(std::ios::scientific);
-  for(u_int j = 0; j < Lt.size(); ++j) {
-    out << Lt[j] << " " << mT[j] << "\n";
-  }
-  out << std::endl;
-  out.close();
+  //Infinite medium problem
+  //std::ofstream out("t-T");
+  //out.precision(16);
+  //out << std::showpos;
+  //out.setf(std::ios::scientific);
+  //for(u_int j = 0; j < Lt.size(); ++j) {
+    //out << Lt[j] << " " << mT[j] << "\n";
+  //}
+  //out << std::endl;
+  //out.close();
 
 }
 
@@ -701,7 +709,8 @@ void DGFEMSpace1D::print_solution_integral(std::ostream& os) {
     VEC<double> w = QUADINFO[i].weight();
     VEC<double> p = QUADINFO[i].points();
     for(u_int g = 0; g < x.size(); ++g) {
-      os << p[g] << " "  << w[g] << " " << Composition(I,i,p[g]).transpose() << "\n";
+      //os << p[g] << " "  << w[g] << " " << Composition(I,i,p[g]).transpose() << "\n";
+      os << p[g] << " "  << w[g] << " " << Composition(T,i,p[g]) << "\n";
     }
     os << "\n";
   }

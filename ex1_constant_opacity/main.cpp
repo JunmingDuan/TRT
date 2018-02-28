@@ -1,9 +1,9 @@
 /**
  * @file main.cpp
- * @brief Implicit DG for 1D pure advection
+ * @brief Implicit DG for 1D Marshak wave
  * @author Duan Junming, duanjm@pku.edu.cn
  * @version 1.0
- * @date 2018-02-19
+ * @date 2018-02-25
  */
 
 #include <iostream>
@@ -11,33 +11,32 @@
 #include <sstream>
 #include "DGFEMSpace1D.h"
 
+double T0(const double x, const double t) {
+  //if(x <= 0.55/15) return 1;
+  //else return 1e-1;
+  //return 1e-2;
+  return 1e-9;
+}
+
 double I0(const double mu, const double x, const double t) {
-  return 0;
+  return 0.5*a*c*pow(T0(x,t),4);
 }
 
 double BL(const double mu, const double x, const double t) {
-  //return 0;
-  return mu*mu;
+  return 0.5*a*c*pow(1,4);
 }
 
 double BR(const double mu, const double x, const double t) {
-  //return (1-exp(4*x))/2;
-  return mu*mu;
+  return 0.5*a*c*pow(1e-9,4);
 }
 
-double sigma_t(const double mu, const double x, const double t) {
-  return 1;
-}
-
-double a(const double mu, const double x, const double t) {
-  return 1;
+double sigma_t(const double mu, const double T, const double x) {
+  return 300.0/pow(T,3);
+  //return 300;
 }
 
 double q(const double mu, const double x, const double t) {
-  //return 1;
-  return -4*pow(mu,3)*M_PI*sin(M_PI*x)*pow(cos(M_PI*x),3)
-    + sigma_t(mu,x,t)*pow(mu,2)*pow(cos(M_PI*x), 4)
-    - sigma_t(mu,x,t)*pow(cos(M_PI*x), 4)/3;
+  return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -57,10 +56,15 @@ int main(int argc, char *argv[]) {
   std::cout << "Build mass matrix ..." << std::endl;
   Problem.BuildMassmat();
   std::cout << "Initialize ..." << std::endl;
-  Problem.init(I0);
+  Problem.init(I0, T0);
   std::cout << "Start to solve ..." << std::endl;
   t1 = clock();
-  Problem.run_steady(sigma_t, a, q, BL, BR);
+  //Problem.run_unsteady(sigma_t, q, BL, BR, 0.001725);
+  Problem.run_unsteady(sigma_t, q, BL, BR, 0.00092);
+  //Problem.run_unsteady(sigma_t, q, BL, BR, 2.3e-2);
+  //Problem.run_unsteady(sigma_t, q, BL, BR, 5.75e-2);
+  //Problem.run_unsteady(sigma_t, q, BL, BR, 1.72e-1);
+  //Problem.run_unsteady(sigma_t, q, BL, BR, 10);
   std::cout << "Finished ..." << std::endl;
   t2 = clock();
   std::stringstream s;
@@ -68,6 +72,7 @@ int main(int argc, char *argv[]) {
   std::string filename(s.str());
   std::ofstream out(filename.c_str());
   std::cout << "Print solution to " << filename << "..." << std::endl;
+  //Problem.print_DG_coe(out);
   Problem.print_solution_integral(out);
   out.close();
   std::cout << "Time consumed: "

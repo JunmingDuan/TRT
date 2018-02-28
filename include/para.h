@@ -16,8 +16,7 @@ typedef VEC<EVEC> bU;
 typedef VEC<bU> SOL;
 
 //speed of light
-//const double c = 3e8;
-const double c = 1;
+extern double c;
 
 extern u_int M;
 //number of basis function
