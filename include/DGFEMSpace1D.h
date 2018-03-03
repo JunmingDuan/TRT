@@ -15,6 +15,7 @@
 #include "Quadrature.h"
 #include "interval_crd_trs.h"
 #include "scaling_limiter.h"
+#include "minmod_limiter.h"
 
 
 class DGFEMSpace1D {
@@ -38,14 +39,14 @@ class DGFEMSpace1D {
     SOL In;
     VEC<EVEC> T, T1;//dimension: Nx*K
     VEC<EVEC> Tn;
-    //std::vector<std::vector<double>> cell_average;//dimension: Nx*M
-    //VEC<VEC<VEC<double>>> cell_val;//dimension: Nx*G*M
+    //VEC<VEC<double>> I_av;//dimension: Nx*M
+    VEC<double> I_PP_val;//dimension: G
+    VEC<double> T_PP_val;//dimension: G
     BM bml, bmr;
     EMAT A;
     EVEC rhs;
     VEC<EVEC> BD_L, BD_R;
     Eigen::ColPivHouseholderQR<EMAT> solver;
-    //, vec_u1, vec_u2;
 
   public:
     DGFEMSpace1D(u_int Nx, double xl, double xr);
@@ -55,7 +56,7 @@ class DGFEMSpace1D {
     void Projection(u_int cell, funcT T0, double t, EVEC&);
     EVEC Composition(const SOL&, u_int cell, double x);
     double Composition(const VEC<EVEC>&, u_int cell, double x);
-    void Pk2val(const SOL&, VEC<VEC<VEC<double>>>&);
+    void Pk2val(const EVEC&, VEC<double>&);
     void init(func I0, funcT T0);
     double cal_dt(const SOL&);
     double scattering_coe(const double T, const double dt, const double st);
@@ -74,9 +75,9 @@ double temperature_denominator(const double T,
     void Boundary(func BL, func BR, VEC<EVEC>& BD_L, VEC<EVEC>& BD_R, const double t);
     void solve_leqn(const EMAT&, const EVEC&, EVEC&);
     void run_unsteady(func, func, func, func, double t_end);
-    //int judge_positivity(const SOL&);
+    //int judge_positivity(const VEC<VEC<double>>&);
     double cal_norm_I(const SOL& s1, const SOL& s2, int n);
-    double cal_norm(const SOL&, const SOL&, const VEC<EVEC>&, const VEC<EVEC>&, int);
+    double cal_norm_T(const VEC<EVEC>&, const VEC<EVEC>&, int);
     double cal_err(const SOL& s1, int n, double t_end);
     void print_DG_coe(std::ostream&);
     void print_solution_integral(std::ostream&);

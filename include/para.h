@@ -18,6 +18,7 @@ typedef VEC<bU> SOL;
 //speed of light
 extern double c;
 
+extern u_int alpha;
 extern u_int M;
 //number of basis function
 extern u_int K;

@@ -27,13 +27,12 @@ double BL(const double mu, const double x, const double t) {
 }
 
 double BR(const double mu, const double x, const double t) {
-  //return 0;
   return 0.5*a*c*pow(1e-2,4);
 }
 
 double sigma_t(const double mu, const double T, const double x) {
-  //return 300.0/pow(T,3);
-  return 300;
+  return 300.0/pow(T,3);
+  //return 300;
 }
 
 double q(const double mu, const double x, const double t) {
@@ -60,10 +59,10 @@ int main(int argc, char *argv[]) {
   Problem.init(I0, T0);
   std::cout << "Start to solve ..." << std::endl;
   t1 = clock();
-  //Problem.run_unsteady(sigma_t, q, BL, BR, 0.001725);
   //Problem.run_unsteady(sigma_t, q, BL, BR, 0.00092);
+  Problem.run_unsteady(sigma_t, q, BL, BR, 0.0001725);
   //Problem.run_unsteady(sigma_t, q, BL, BR, 2.3e-2);
-  Problem.run_unsteady(sigma_t, q, BL, BR, 5.75e-2);
+  //Problem.run_unsteady(sigma_t, q, BL, BR, 5.75e-2);
   //Problem.run_unsteady(sigma_t, q, BL, BR, 1.72e-1);
   //Problem.run_unsteady(sigma_t, q, BL, BR, 10);
   std::cout << "Finished ..." << std::endl;

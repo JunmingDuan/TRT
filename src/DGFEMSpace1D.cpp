@@ -66,6 +66,8 @@ void DGFEMSpace1D::BuildQuad(u_int np) {
     QUADINFO[i].set_jacobi( local_to_global_jacobian(lv, gv),
         global_to_local_jacobian(lv, gv) );
   }
+  I_PP_val.resize(np);
+  T_PP_val.resize(np);
   //direction
   sum_wm = 2;
   if(M > 1) {
@@ -202,14 +204,14 @@ double DGFEMSpace1D::Composition(const VEC<EVEC>& T, u_int cell, double x) {
 }
 
 
-void DGFEMSpace1D::Pk2val(const SOL& I, VEC<VEC<VEC<double>>>& val) {
-  //VEC<double> p;
-  //for(u_int i = 0; i < Nx; ++i) {
-    //p = QUADINFO[i].points();
-    //for(u_int g = 0; g < p.size(); ++g) {
-      //val[i][g] = Composition(I, i, p[g]);
-    //}
-  //}
+void DGFEMSpace1D::Pk2val(const EVEC& u, VEC<double>& val) {
+  VEC<double> x = TemQuad.points(), V;
+  for(u_int g = 0; g < x.size(); ++g) {
+    V = Poly(x[g]);
+    for(u_int k = 0; k < K; ++k) {
+      val[g] += u[k]*V[k];
+    }
+  }
 }
 
 void DGFEMSpace1D::init(func I0, funcT T0) {
@@ -266,7 +268,7 @@ void DGFEMSpace1D::RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>&
         A.setZero();
         rhs.setZero();
         //build matrix, outgoing and spacial prime
-        A = mu[m]*BDRR_mat
+        A =  mu[m]*BDRR_mat
           - (mu[m])*prime_mat;//g2l_jab given by prime is eliminated by the l2g_jab given byintegral transformation
         //inflow
         if(i == 0) { rhs = mu[m]*BD_L[m]; }
@@ -303,7 +305,28 @@ void DGFEMSpace1D::RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>&
         }
 
         solve_leqn(A, rhs, I_new[i][m]);
+        if(PP_limiter == 1) {//perform PP limiter
+          Pk2val(I_new[i][m], I_PP_val);
+          u_int g = 0;
+          while(g < x.size()) {
+            if(I_PP_val[g] < EPS) {
+              std::cout << "i: " << i << " ,m: " << m << "\n";
+              std::cout << "before I's limiter:\n";
+              std::cout << I_new[i][m].transpose() << std::endl;
+              std::cout << "Use PP limiter on I!!" << std::endl;
+              scaling_limiter::run(I_PP_val, I_new[i][m]);
+              std::cout << "after I's limiter:" << std::endl;
+              std::cout << I_new[i][m].transpose() << std::endl;
+              break;
+            }
+            g++;
+          }
+        }
 
+        //std::cout << "############  I  ###########" << std::endl;
+        //std::cout << "i: " << i << " \nI: " << Composition(I_new,i,mesh[i]).transpose()
+          //<< " \nI: " << Composition(I_new,i,mesh[i+1]).transpose() << std::endl;
+        //std::cout << "I: " << Composition(I_new,i,0.5*(mesh[i]+mesh[i+1])).transpose() << std::endl;
       }
     }
     else {
@@ -318,7 +341,18 @@ void DGFEMSpace1D::RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>&
         A = -mu[m]*BDLL_mat
           - (mu[m])*prime_mat;//g2l_jab given by prime is eliminated by the l2g_jab given byintegral transformation
         //inflow
-        if(i == Nx-1) { rhs = -mu[m]*BD_R[m]; }
+        //if(i == Nx-1) {//reflex_BD
+          //VEC<double> VR;
+          //VR = Poly(1);
+          //EVEC reflex_BD = Composition(I_new, i, mesh[i+1]);
+          //for(u_int k = 0; k < K; ++k) {
+            //BD_R[m][k] = reflex_BD[M-1-m]*VR[k];
+          //}
+          //rhs = -mu[m]*BD_R[m];
+        //}
+        if(i == Nx-1) {//Dirichlet_BD
+          rhs = -mu[m]*BD_R[m];
+        }
         else { rhs = - mu[m]*BDLR_mat*I_new[i+1][m]; }
         //time direvative
         rhs += (1./(c*dt)*QUADINFO[i].l2g_jacobian())*absorb_mat*In[i][m];
@@ -352,8 +386,32 @@ void DGFEMSpace1D::RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>&
         }
 
         solve_leqn(A, rhs, I_new[i][m]);
+
+        if(PP_limiter == 1) {//perform PP limiter
+          Pk2val(I_new[i][m], I_PP_val);
+          u_int g = 0;
+          while(g < x.size()) {
+            if(I_PP_val[g] < EPS) {
+              std::cout << "i: " << i << " ,m: " << m << "\n";
+              std::cout << "before I's limiter:\n";
+              std::cout << I_new[i][m].transpose() << std::endl;
+              std::cout << "Use PP limiter on I!!" << std::endl;
+              scaling_limiter::run(I_PP_val, I_new[i][m]);
+              std::cout << "after I's limiter:" << std::endl;
+              std::cout << I_new[i][m].transpose() << std::endl;
+              break;
+            }
+            g++;
+          }
+        }
+
+        //std::cout << "############  I  ###########" << std::endl;
+        //std::cout << "i: " << i << " \nI: " << Composition(I_new,i,mesh[i]).transpose()
+          //<< " \nI: " << Composition(I_new,i,mesh[i+1]).transpose() << std::endl;
+        //std::cout << "I: " << Composition(I_new,i,0.5*(mesh[i]+mesh[i+1])).transpose() << std::endl;
       }
     }
+
   }
 }
 
@@ -401,12 +459,35 @@ void DGFEMSpace1D::temperature(const SOL& I_new, const VEC<EVEC>& Tn,
       }
     }
     solve_leqn(A, rhs, T_new[i]);
-    if( T_new[i][0] < 0) {
-      std::cout << "Negative temperature!" << std::endl;
-      std::cout << "i,T_new[i]: " << "\n";
-      std::cout << T_new[i] << std::endl;
-      abort();
+    if(PP_limiter == 1) {//perform PP limiter
+      Pk2val(T_new[i], T_PP_val);
+      u_int g = 0;
+      while(g < x.size()) {
+        if(T_PP_val[g] < EPS) {
+          std::cout << "i: " << i << "\n";
+          std::cout << "before T's limiter:\n";
+          std::cout << T_new[i].transpose() << std::endl;
+          std::cout << "Use PP limiter on T!!" << std::endl;
+          scaling_limiter::run(T_PP_val, T_new[i]);
+          std::cout << "after T's limiter:" << std::endl;
+          std::cout << T_new[i].transpose() << std::endl;
+          break;
+        }
+        g++;
+      }
     }
+
+
+    //std::cout << "############  T  ###########" << std::endl;
+    //std::cout << "i: " << i << " ,T: " << Composition(T_new,i,mesh[i])
+    //<< " ,T: " << Composition(T_new,i,mesh[i+1]) << std::endl;
+    //std::cout << T_new[i][0] << std::endl;
+    //if( Composition(T_new,i,mesh[i]) < 0 ) {
+      //std::cout << "Negative temperature!" << std::endl;
+      //std::cout << "i,T_new[i]: " << "\n";
+      //std::cout << T_new[i] << std::endl;
+      //abort();
+    //}
     //std::cout << "############Tn[0],T[0],I_new[0]###########" << std::endl;
     //std::cout << Tn[0] << " " << T[0] << " " << I_new[0] << std::endl;
     //std::cout << T_new[0] << std::endl;
@@ -415,49 +496,36 @@ void DGFEMSpace1D::temperature(const SOL& I_new, const VEC<EVEC>& Tn,
 }
 
 void DGFEMSpace1D::run_unsteady(func sigma_t, func q, func BL, func BR, double t_end) {
-  int ite(0), ite_I(0), is_pp(0), circle(0);
+  int ite(0), ite_T(0), ite_I(0), is_pp(0), circle(0);
   double t(0), dt(0), dtt(0), res(1), res_I(1);
   In = I; Tn = T;
   //std::cout << "Conservation: " << 2./c*Composition(I,0,0.5*(mesh[0]+mesh[1]))[0]
     //+Cv*Composition(T,0, 0.5*(mesh[0]+mesh[1]))<< std::endl;
   VEC<double> Lt, mT;
-  while ( t < t_end ) {
+  int MAXITE(1e4);
+  while ( t < t_end && ite < MAXITE ) {
     dt = cal_dt(I);
     dt = std::min(dt, t_end-t);
-    res = 1; ite = 0;
-    while ( res > TOL ) {//only for 1D case
-      if(PP_limiter == 1) {
-        //do {
-        //forward_one_step(I, sigma_t, a, q, t, dt, &dtt, I1);
-        //is_pp = judge_positivity(I1);
-        //if(is_pp == 0) {
-        //dt *= 2;
-        //}
-        //} while(is_pp == 0);
-        //Pk2val(I1, cell_val);
-        //scaling_limiter::run(cell_average, cell_val, I1);
+    res = 1; ite_T = 0;
+    while ( res > TOL && ite_T < MAXITE ) {//one temporal step
+      res_I = 1; ite_I = 0;
+      while ( res_I > TOL && ite_I < MAXITE ) {//ISI iteration
+        RAD_BE_unsteady(In, I, Tn, T, sigma_t, q, t, dt, I1, T1, BL, BR);
+        minmod_limiter::run(I1, h);
+        res_I = cal_norm_I(I, I1, 10);
+        I = I1;
+        std::cout << "ite_I: " << ++ite_I << ", I's res: ";
+        std::cout << res_I << std::endl;
       }
-      else if(PP_limiter == 0) {
-        res_I = 1; ite_I = 0;
-        while ( res_I > TOL ) {//ISI iteration
-          RAD_BE_unsteady(In, I, Tn, T, sigma_t, q, t, dt, I1, T1, BL, BR);
-          res_I = cal_norm_I(I, I1, 10);
-          I = I1;
-          ite_I++;
-          std::cout << "ite_I: " << ite_I << ", err: ";
-          std::cout << res_I << std::endl;
-        }
-        temperature(I, Tn, T, dt, sigma_t, T1);
-        res = cal_norm(I, I1, T, T1, 10);
-        T = T1;
-        ite++;
-        std::cout << "ite: " << ite << ", err: ";
-        std::cout << res << std::endl;
-      }
+      temperature(I, Tn, T, dt, sigma_t, T1);//update temperature
+      minmod_limiter::run(T1, h);
+      res = cal_norm_T(T, T1, 10);
+      T = T1;
+      std::cout << "ite_T: " << ++ite_T << ", T's res: " << res << std::endl;
     }
     t += dt;
     In = I; Tn = T;
-    std::cout << "dt: " << dt << ", t: " << t << std::endl;
+    std::cout << "ite: " << ++ite << ", dt: " << dt << ", t: " << t << std::endl;
     //Lt.push_back(t);
     //mT.push_back(Composition(T, 0, 0.5*(mesh[0]+mesh[1])));
     //std::cout << "Conservation: " << 2./c*Composition(I,0,0.5*(mesh[0]+mesh[1]))[0]
@@ -508,24 +576,7 @@ double DGFEMSpace1D::cal_norm_I(const SOL& s1, const SOL& s2, int n) {
   double RES(0);
   VEC<double> norm(M,0);
   EVEC tmp1(M), tmp2(M);
-  if(n == 2) {
-    for(u_int i = 0; i < Nx; ++i) {
-      VEC<double> p = QUADINFO[i].points();
-      VEC<double> w = QUADINFO[i].weight();
-      for(u_int g = 0; g < p.size(); ++g) {
-        tmp1 = Composition(s1,i,p[g]);
-        tmp2 = Composition(s2,i,p[g]);
-        for(u_int d = 0; d < M; ++d) {
-          norm[d] += pow(tmp1[d]-tmp2[d], 2) * w[g];
-        }
-      }
-    }
-    for(u_int d = 0; d < M; ++d) {
-      norm[d] = sqrt(norm[d]/Nx);
-    }
-    return RES;
-  }
-  else if(n == 10) {//max norm
+  if(n == 10) {//max norm
     //for(u_int i = 0; i < Nx; ++i) {
       //VEC<double> p = QUADINFO[i].points();
       //VEC<double> w = QUADINFO[i].weight();
@@ -552,8 +603,7 @@ double DGFEMSpace1D::cal_norm_I(const SOL& s1, const SOL& s2, int n) {
   }
 }
 
-double DGFEMSpace1D::cal_norm(const SOL& s1, const SOL& s2,
-    const VEC<EVEC>& T, const VEC<EVEC>& T1, int n) {
+double DGFEMSpace1D::cal_norm_T(const VEC<EVEC>& T, const VEC<EVEC>& T1, int n) {
   double RES(0);
   VEC<double> norm(M,0);
   EVEC tmp1(M), tmp2(M);
@@ -562,8 +612,6 @@ double DGFEMSpace1D::cal_norm(const SOL& s1, const SOL& s2,
       VEC<double> p = QUADINFO[i].points();
       VEC<double> w = QUADINFO[i].weight();
       for(u_int g = 0; g < p.size(); ++g) {
-        tmp1 = Composition(s1,i,p[g]);
-        tmp2 = Composition(s2,i,p[g]);
         for(u_int d = 0; d < M; ++d) {
           norm[d] += pow(tmp1[d]-tmp2[d], 2) * w[g];
         }
@@ -587,12 +635,8 @@ double DGFEMSpace1D::cal_norm(const SOL& s1, const SOL& s2,
       //}
     //}
     for(u_int i = 0; i < Nx; ++i) {
-      for(u_int d = 0; d < M; ++d) {
-        norm[d] = std::max(fabs(s1[i][d][0]-s2[i][d][0]), norm[d]);
-        RES = std::max(norm[d], RES);
-        RES = std::max(T[i][0]-T1[i][0], RES);
-        //norm[d] = std::max((s1[i][d]-s2[i][d]).norm(), norm[d]);
-      }
+      RES = std::max(fabs(T[i][0]-T1[i][0]), RES);
+      //norm[d] = std::max((s1[i][d]-s2[i][d]).norm(), norm[d]);
     }
     return RES;
   }
