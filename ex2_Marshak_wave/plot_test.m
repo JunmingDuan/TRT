@@ -8,5 +8,4 @@ size(numer1)
 x1 = numer1(:,1); y1 = numer1(:,3);
 plot(x1, y1, 'r-o');
 %axis([0,0.02,0,1]);
-%axis([0,0.055,0,1]);
 

@@ -18,7 +18,7 @@ void scaling_limiter::run(const VEC<double>& val, EVEC& sol)
   //if(min_val < EPS) {
     t = (sol[0] - EPS) / (sol[0] - min_val);
     //modify moments whoes order > 1
-    std::cout << "scale: " << t << std::endl;
+    //std::cout << "scale: " << t << std::endl;
     for(u_int k = 1; k < K; ++k) {
       sol[k] *= t;
     }

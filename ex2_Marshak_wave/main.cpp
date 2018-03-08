@@ -60,11 +60,11 @@ int main(int argc, char *argv[]) {
   std::cout << "Start to solve ..." << std::endl;
   t1 = clock();
   //Problem.run_unsteady(sigma_t, q, BL, BR, 0.00092);
-  Problem.run_unsteady(sigma_t, q, BL, BR, 0.0001725);
-  //Problem.run_unsteady(sigma_t, q, BL, BR, 2.3e-2);
-  //Problem.run_unsteady(sigma_t, q, BL, BR, 5.75e-2);
+  //Problem.run_unsteady(sigma_t, q, BL, BR, 0.0001725);
+  Problem.run_unsteady(sigma_t, q, BL, BR, 2.3e-2);
+  //Problem.run_unsteady(sigma_t, q, BL, BR, 1.61e-1);
   //Problem.run_unsteady(sigma_t, q, BL, BR, 1.72e-1);
-  //Problem.run_unsteady(sigma_t, q, BL, BR, 10);
+  //Problem.run_unsteady(sigma_t, q, BL, BR, 4.6e-2);
   std::cout << "Finished ..." << std::endl;
   t2 = clock();
   std::stringstream s;

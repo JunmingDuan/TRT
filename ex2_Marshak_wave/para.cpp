@@ -17,10 +17,10 @@ double Nt_tol = 1e-14;
 double Nt_Ftol = 1e-14;
 //tol for radiation density
 //double tol = 1e-14;
-double tol = 1e-6;
+double tol = 1e-5;
 //tolerance for temperature
-//double TOL = 1e-14;
-double TOL = 1e-6;
+//double TOL = 1e-10;
+double TOL = 1e-5;
 //eps for scaling_limiter
 //double EPS = 1e-13;
 double EPS = 0;
