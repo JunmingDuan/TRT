@@ -208,6 +208,7 @@ void DGFEMSpace1D::Pk2val(const EVEC& u, VEC<double>& val) {
   VEC<double> x = TemQuad.points(), V;
   for(u_int g = 0; g < x.size(); ++g) {
     V = Poly(x[g]);
+    val[g] = 0;
     for(u_int k = 0; k < K; ++k) {
       val[g] += u[k]*V[k];
     }
@@ -228,8 +229,8 @@ void DGFEMSpace1D::init(func I0, funcT T0) {
 }
 
 double DGFEMSpace1D::cal_dt(const SOL& I) {
-  return 5.75e-3;
-  //return 5.75e-9;
+  return 5.75e-6;
+  //return 5.75e-6;
 }
 
 int DGFEMSpace1D::forward_one_step_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>& Tn, const VEC<EVEC>& T,
@@ -239,16 +240,28 @@ int DGFEMSpace1D::forward_one_step_unsteady(const SOL& In, const SOL& I, const V
 }
 
 double DGFEMSpace1D::scattering_coe(const double T, const double dt, const double st) {
-  double tmp1 = 2.0*a*c*st*pow(T,3);
-  double tmp2 = 1 + sum_wm*dt/Cv*tmp1;
-  return tmp1/tmp2;
+  return 0;
+  //double tmp1 = 2.0*a*c*st*pow(T,3);
+  //double tmp2 = 1 + sum_wm*dt/Cv*tmp1;
+  //return tmp1/tmp2;
 }
 
 double DGFEMSpace1D::material_coe(const double T, const double Tn,
     const double dt, const double st) {
-  double tmp1 = -1.5*a*c*st*pow(T,4);
-  double tmp2 = Tn - sum_wm*dt/Cv*tmp1;
-  return tmp1 + 2*a*c*st*pow(T,3)/(1+sum_wm*dt/Cv*2*a*c*st*pow(T,3))*tmp2;
+  return 0.5*a*c*st*pow(T,4);
+  //double tmp1 = -1.5*a*c*st*pow(T,4);
+  //double tmp2 = Tn - sum_wm*dt/Cv*tmp1;
+  //return tmp1 + 2*a*c*st*pow(T,3)/(1+sum_wm*dt/Cv*2*a*c*st*pow(T,3))*tmp2;
+}
+
+double DGFEMSpace1D::temperature_numerator(const double T, const double Tn, const double scattering_I,
+    const double dt, const double st) {
+  return Tn + dt/Cv*scattering_I*st + 3.0*a*c*dt/Cv*st*pow(T,4);
+}
+
+double DGFEMSpace1D::temperature_denominator(const double T,
+    const double dt, const double st) {
+  return 1.0 + 4.0*a*c*dt/Cv*st*pow(T,3);
 }
 
 void DGFEMSpace1D::RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>& Tn, const VEC<EVEC>& T,
@@ -311,6 +324,7 @@ void DGFEMSpace1D::RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>&
           u_int g = 0;
           while(g < x.size()) {
             if(I_PP_val[g] < EPS) {
+              //std::cout << I_PP_val << std::endl;
               //std::cout << "i: " << i << " ,m: " << m << "\n";
               //std::cout << "before I's limiter:\n";
               //std::cout << I_new[i][m].transpose() << std::endl;
@@ -318,6 +332,7 @@ void DGFEMSpace1D::RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>&
               scaling_limiter::run(I_PP_val, I_new[i][m]);
               //std::cout << "after I's limiter:" << std::endl;
               //std::cout << I_new[i][m].transpose() << std::endl;
+              //abort();
               break;
             }
             g++;
@@ -422,16 +437,6 @@ void DGFEMSpace1D::solve_leqn(const EMAT& A, const EVEC& rhs, EVEC& u) {
   u = solver.solve(rhs);
 }
 
-double DGFEMSpace1D::temperature_numerator(const double T, const double Tn, const double scattering_I,
-    const double dt, const double st) {
-  return Tn + dt/Cv*scattering_I*st + 3.0*a*c*dt/Cv*st*pow(T,4);
-}
-
-double DGFEMSpace1D::temperature_denominator(const double T,
-    const double dt, const double st) {
-  return 1.0 + 4.0*a*c*dt/Cv*st*pow(T,3);
-}
-
 void DGFEMSpace1D::temperature(const SOL& I_new, const VEC<EVEC>& Tn,
     const VEC<EVEC>& T, const double dt, func sigma_t, VEC<EVEC>& T_new) {
   for(u_int i = 0; i < Nx; ++i) {
@@ -458,12 +463,16 @@ void DGFEMSpace1D::temperature(const SOL& I_new, const VEC<EVEC>& Tn,
           A(k,j) += temperature_denominator(Tg, dt, st)*V[j]
             *V[k]*w[g]*QUADINFO[i].l2g_jacobian();
         }
+        std::cout << "scattering_I: " << scattering_I << std::endl;
+        std::cout << "temperature_numerator: " << temperature_numerator(Tg, Tng, scattering_I, dt, st) << std::endl;
+        std::cout << "temperature_denominator: " << temperature_denominator(Tg, dt, st) << std::endl;
       }
     }
     solve_leqn(A, rhs, T_new[i]);
     if(PP_limiter == 1) {//perform PP limiter
       Pk2val(T_new[i], T_PP_val);
       u_int g = 0;
+      //std::cout << T_PP_val << std::endl;
       while(g < x.size()) {
         if(T_PP_val[g] < EPS) {
           //std::cout << "i: " << i << "\n";
@@ -473,6 +482,7 @@ void DGFEMSpace1D::temperature(const SOL& I_new, const VEC<EVEC>& Tn,
           scaling_limiter::run(T_PP_val, T_new[i]);
           //std::cout << "after T's limiter:" << std::endl;
           //std::cout << T_new[i].transpose() << std::endl;
+          //abort();
           break;
         }
         g++;
@@ -509,56 +519,90 @@ void DGFEMSpace1D::run_unsteady(func sigma_t, func q, func BL, func BR, double t
     dt = cal_dt(I);
     dt = std::min(dt, t_end-t);
     res = 1; ite_T = 0;
-    while ( res > tol && ite_T < MAXITE ) {//one temporal step
-      res_I = 1; ite_I = 0;
-      //while ( (res_I > TOL || res > TOL) && ite_I < MAXITE ) {//ISI iteration
-      while ( res_I > TOL && ite_I < MAXITE ) {//ISI iteration
-        RAD_BE_unsteady(In, I, Tn, T, sigma_t, q, t, dt, I1, T1, BL, BR);
-        minmod_limiter::run(I1, h);
-        res_I = cal_norm_I(I, I1, 10);
-        I = I1;
-        std::cout << "ite_I: " << ++ite_I << ", I's res: ";
-        std::cout << res_I << std::endl;
-        temperature(I, Tn, T, dt, sigma_t, T1);//update temperature
-        minmod_limiter::run(T1, h);
-        res = cal_norm_T(T, T1, 10);
-        T = T1;
-      }
-        //temperature(I, Tn, T, dt, sigma_t, T1);//update temperature
-        //res = cal_norm_T(T, T1, 10);
-        //T = T1;
-      //temperature(I, Tn, T, dt, sigma_t, T1);//update temperature
-      //minmod_limiter::run(T1, h);
+    res_I = 1; ite_I = 0;
+    while ( res_I > TOL && ite_I < MAXITE ) {//ISI iteration
+      RAD_BE_unsteady(In, I, Tn, T, sigma_t, q, t, dt, I1, T1, BL, BR);
+      minmod_limiter::run(I1, h);
+      res_I = cal_norm_I(I, I1, 10);
+      I = I1;
+      std::cout << "ite_I: " << ++ite_I << ", I's res: ";
+      std::cout << res_I << std::endl;
+    }
+    while ( res > tol && ite_T < MAXITE ) {//Newton iteration
+      temperature(I, Tn, T, dt, sigma_t, T1);//update temperature
+      minmod_limiter::run(T1, h);
+      res = cal_norm_T(T, T1, 10);
+      T = T1;
       std::cout << "ite_T: " << ++ite_T << ", T's res: " << res << std::endl;
     }
     t += dt;
     In = I; Tn = T;
     std::cout << "ite: " << ++ite << ", dt: " << dt << ", t: " << t << std::endl;
-    //Lt.push_back(t);
-    //mT.push_back(Composition(T, 0, 0.5*(mesh[0]+mesh[1])));
-    //std::cout << "Conservation: " << 2./c*Composition(I,0,0.5*(mesh[0]+mesh[1]))[0]
-      //+Cv*Composition(T,0, 0.5*(mesh[0]+mesh[1]))<< std::endl;
   }
-  //std::cout << "err1, err2, errf:\n"
-    //<< cal_err(I, 1, t_end) << "\t"
-    //<< cal_err(I, 2, t_end) << "\t"
-    //<< cal_err(I, 0, t_end) << std::endl;
-  //for(u_int i = 0; i < Nx; ++i) {
-    //std::cout << Composition(T, i, 0.5*(mesh[i]+mesh[i+1])) << "\t";
-  //}
-  //std::cout << std::endl;
-  //Infinite medium problem
-  //std::ofstream out("t-T");
-  //out.precision(16);
-  //out << std::showpos;
-  //out.setf(std::ios::scientific);
-  //for(u_int j = 0; j < Lt.size(); ++j) {
-    //out << Lt[j] << " " << mT[j] << "\n";
-  //}
-  //out << std::endl;
-  //out.close();
-
 }
+
+
+//void DGFEMSpace1D::run_unsteady(func sigma_t, func q, func BL, func BR, double t_end) {
+//  int ite(0), ite_T(0), ite_I(0), is_pp(0), circle(0);
+//  double t(0), dt(0), dtt(0), res(1), res_I(1);
+//  In = I; Tn = T;
+//  //std::cout << "Conservation: " << 2./c*Composition(I,0,0.5*(mesh[0]+mesh[1]))[0]
+//    //+Cv*Composition(T,0, 0.5*(mesh[0]+mesh[1]))<< std::endl;
+//  VEC<double> Lt, mT;
+//  int MAXITE(1e4);
+//  while ( t < t_end && ite < MAXITE ) {
+//    dt = cal_dt(I);
+//    dt = std::min(dt, t_end-t);
+//    res = 1; ite_T = 0;
+//    while ( res > tol && ite_T < MAXITE ) {//one temporal step
+//      res_I = 1; ite_I = 0;
+//      //while ( (res_I > TOL || res > TOL) && ite_I < MAXITE ) {//ISI iteration
+//      while ( res_I > TOL && ite_I < MAXITE ) {//ISI iteration
+//        RAD_BE_unsteady(In, I, Tn, T, sigma_t, q, t, dt, I1, T1, BL, BR);
+//        minmod_limiter::run(I1, h);
+//        res_I = cal_norm_I(I, I1, 10);
+//        I = I1;
+//        std::cout << "ite_I: " << ++ite_I << ", I's res: ";
+//        std::cout << res_I << std::endl;
+//        //temperature(I, Tn, T, dt, sigma_t, T1);//update temperature
+//        //minmod_limiter::run(T1, h);
+//        //res = cal_norm_T(T, T1, 10);
+//        //T = T1;
+//      }
+//      temperature(I, Tn, T, dt, sigma_t, T1);//update temperature
+//      minmod_limiter::run(T1, h);
+//      res = cal_norm_T(T, T1, 10);
+//      T = T1;
+//      std::cout << "ite_T: " << ++ite_T << ", T's res: " << res << std::endl;
+//    }
+//    t += dt;
+//    In = I; Tn = T;
+//    std::cout << "ite: " << ++ite << ", dt: " << dt << ", t: " << t << std::endl;
+//    //Lt.push_back(t);
+//    //mT.push_back(Composition(T, 0, 0.5*(mesh[0]+mesh[1])));
+//    //std::cout << "Conservation: " << 2./c*Composition(I,0,0.5*(mesh[0]+mesh[1]))[0]
+//      //+Cv*Composition(T,0, 0.5*(mesh[0]+mesh[1]))<< std::endl;
+//  }
+//  //std::cout << "err1, err2, errf:\n"
+//    //<< cal_err(I, 1, t_end) << "\t"
+//    //<< cal_err(I, 2, t_end) << "\t"
+//    //<< cal_err(I, 0, t_end) << std::endl;
+//  //for(u_int i = 0; i < Nx; ++i) {
+//    //std::cout << Composition(T, i, 0.5*(mesh[i]+mesh[i+1])) << "\t";
+//  //}
+//  //std::cout << std::endl;
+//  //Infinite medium problem
+//  //std::ofstream out("t-T");
+//  //out.precision(16);
+//  //out << std::showpos;
+//  //out.setf(std::ios::scientific);
+//  //for(u_int j = 0; j < Lt.size(); ++j) {
+//    //out << Lt[j] << " " << mT[j] << "\n";
+//  //}
+//  //out << std::endl;
+//  //out.close();
+//
+//}
 
 
 //int DGFEMSpace1D::judge_positivity(const SOL& I) {

@@ -212,6 +212,7 @@ void DGFEMSpace1D::RAD_BE_unsteady(const SOL& In, const SOL& I, func sigma_t, fu
         A = mu[m]*BDRR_mat
           - (mu[m])*prime_mat//g2l_jab given by prime is eliminated by the l2g_jab given byintegral transformation
           + ((1./(c*dt)+sigma_t(mu[m], mesh[i], t))*QUADINFO[i].l2g_jacobian())*absorb_mat;
+          //+ (sigma_t(mu[m], mesh[i], t)*QUADINFO[i].l2g_jacobian())*absorb_mat;
         //RHS inflow
         if(i == 0) { rhs = mu[m]*BD_L[m]; }
         else { rhs = mu[m]*BDRL_mat*I_new[i-1][m]; }

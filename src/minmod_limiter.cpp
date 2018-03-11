@@ -30,6 +30,22 @@ void minmod_limiter::run(SOL& sol, const double h)
     for(u_int i = 0; i < Nx; ++i) {
       sol[i][m][1] = S[i]/h;
     }
+    //
+    for(u_int i = 0; i < Nx; ++i) {
+      if(i == 0) {
+        S[i] = minmod(alpha,sol[i][m][1]*h,sol[i][m][0],sol[i+1][m][0],sol[i][m][1]*h);
+      }
+      else if(i == Nx-1) {
+        S[i] = minmod(alpha,sol[i-1][m][0],sol[i][m][0],sol[i][m][1]*h,sol[i][m][1]*h);
+      }
+      else {
+        S[i] = minmod(alpha,sol[i-1][m][0],sol[i][m][0],sol[i+1][m][0],sol[i][m][1]*h);
+      }
+    }
+    for(u_int i = 0; i < Nx; ++i) {
+      sol[i][m][1] = S[i]/h;
+    }
+
   }
 }
 
