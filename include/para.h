@@ -15,9 +15,6 @@ typedef Eigen::VectorXd EVEC;
 typedef VEC<EVEC> bU;
 typedef VEC<bU> SOL;
 
-//speed of light
-extern double c;
-
 extern u_int alpha;
 extern u_int M;
 //number of basis function
@@ -27,19 +24,17 @@ extern u_int K;
 extern u_int BDL; extern u_int BDR;
 //positivity preserving limiter
 extern u_int PP_limiter;
-//parameters for Newton iteration
-extern int MaxNt_ite;
-extern double Nt_tol;
-extern double Nt_Ftol;
-//tol for linear equation solver
-//const double tol = 1e-13;
-extern double tol;
-//tol for steady solution solver
-extern double TOL;
 //eps for scaling_limiter
 extern double EPS;
+
 extern double a;
+extern double c;
 extern double Cv;
+
+extern double tol_I;
+extern double tol_T;
+extern double TOL;
+extern u_int MAXITE;
 
 #endif //PARA_H_
 

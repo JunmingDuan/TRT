@@ -35,11 +35,12 @@ class DGFEMSpace1D {
     EMAT BDLL_mat;
     EMAT prime_mat;
     EMAT absorb_mat;
-    SOL I, I1;//dimension: Nx*K*M
+    SOL I, I1, I2;//dimension: Nx*K*M
     SOL In;
-    VEC<EVEC> T, T1;//dimension: Nx*K
+    VEC<EVEC> T, T1, T2;//dimension: Nx*K
     VEC<EVEC> Tn;
     //VEC<VEC<double>> I_av;//dimension: Nx*M
+    VEC<double> u_PP_val;//dimension: G
     VEC<double> I_PP_val;//dimension: G
     VEC<double> T_PP_val;//dimension: G
     BM bml, bmr;
@@ -64,20 +65,25 @@ class DGFEMSpace1D {
     int forward_one_step_unsteady(const SOL&, const SOL&, const VEC<EVEC>&, const VEC<EVEC>&,
         func, func, double t, double dt, double* dtt, SOL&, VEC<EVEC>&, func, func);
     //radiation part, backward Euler
-    void RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>&, const VEC<EVEC>&,
-        func, func, const double, const double, SOL&, VEC<EVEC>&, func, func);
-    void temperature(const SOL& I_new, const VEC<EVEC>& Tn,
+    void RAD_BE_unsteady_ite(const SOL& In, const SOL& I, const VEC<EVEC>&, const VEC<EVEC>&,
+        func, func, const double, const double, SOL&, func, func);
+    double RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>&, const VEC<EVEC>&,
+        func, func, const double, const double, SOL&, func, func);
+    void temperature_ite(const SOL& I_new, const VEC<EVEC>& Tn,
         const VEC<EVEC>& T, const double dt, func, VEC<EVEC>& T_new);
-double temperature_numerator(const double T, const double Tn, const double scattering_I,
-    const double dt, const double st);
-double temperature_denominator(const double T,
-    const double dt, const double st);
+    double temperature(const SOL& I_new, const VEC<EVEC>& Tn,
+        const VEC<EVEC>& T, const double dt, func, VEC<EVEC>& T_new);
+    double temperature_numerator(const double T, const double Tn, const double scattering_I,
+        const double dt, const double st);
+    double temperature_denominator(const double T,
+        const double dt, const double st);
     void Boundary(func BL, func BR, VEC<EVEC>& BD_L, VEC<EVEC>& BD_R, const double t);
     void solve_leqn(const EMAT&, const EVEC&, EVEC&);
     void run_unsteady(func, func, func, func, double t_end);
-    //int judge_positivity(const VEC<VEC<double>>&);
+    void do_scaling_limiter(EVEC&);
     double cal_norm_I(const SOL& s1, const SOL& s2, int n);
     double cal_norm_T(const VEC<EVEC>&, const VEC<EVEC>&, int);
+    double cal_norm(const SOL& s1, const SOL& s2, const VEC<EVEC>&, const VEC<EVEC>&, int n);
     double cal_err(const SOL& s1, int n, double t_end);
     void print_DG_coe(std::ostream&);
     void print_solution_integral(std::ostream&);
