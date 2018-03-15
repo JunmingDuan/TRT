@@ -3,7 +3,7 @@
  * @brief Implicit DG for 1D Marshak wave
  * @author Duan Junming, duanjm@pku.edu.cn
  * @version 1.0
- * @date 2018-02-25
+ * @date 2018-03-15
  */
 
 #include <iostream>
@@ -33,6 +33,7 @@ double BR(const double mu, const double x, const double t) {
 double sigma_t(const double mu, const double T, const double x) {
   return 300.0/pow(T,3);
   //return 300;
+  //return 10;
 }
 
 double q(const double mu, const double x, const double t) {

@@ -15,7 +15,7 @@ typedef Eigen::VectorXd EVEC;
 typedef VEC<EVEC> bU;
 typedef VEC<bU> SOL;
 
-extern u_int alpha;
+extern int alpha;
 extern u_int M;
 //number of basis function
 extern u_int K;

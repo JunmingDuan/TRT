@@ -52,8 +52,17 @@ double DGFEMSpace1D::RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC
             }
           }
         }
+        //if(m == 1 && i == 0) {
+          //std::cout << "A:" << std::endl;
+          //std::cout << A << std::endl;
+          //std::cout << "rhs:" << std::endl;
+          //std::cout << rhs << std::endl;
+        //}
 
         solve_leqn(A, rhs, I_new[i][m]);
+        //std::cout << "RAD_BE_unsteady1" << std::endl;
+        //std::cout << "m: " << m << std::endl;
+        //std::cout << I_new << std::endl;
         if(PP_limiter == 1) {//perform PP limiter
           do_scaling_limiter(I_new[i][m]);
         }
@@ -117,10 +126,13 @@ double DGFEMSpace1D::RAD_BE_unsteady(const SOL& In, const SOL& I, const VEC<EVEC
           }
         }
         solve_leqn(A, rhs, I_new[i][m]);
+        //std::cout << "RAD_BE_unsteady1" << std::endl;
+        //std::cout << "m: " << m << std::endl;
+        //std::cout << I_new << std::endl;
         if(PP_limiter == 1) {//perform PP limiter
           do_scaling_limiter(I_new[i][m]);
         }
-        if(i-- > 0) break;
+        if(i-- == 0) break;
       }//end i
     }//end <-
   }//end M
@@ -158,25 +170,24 @@ double DGFEMSpace1D::temperature(const SOL& I_new, const VEC<EVEC>& Tn,
           A(k,j) += temperature_denominator(Tg, dt, st)*V[j]
             *V[k]*w[g]*QUADINFO[i].l2g_jacobian();
         }
-        //std::cout << "scattering_I: " << scattering_I << std::endl;
-        //std::cout << "temperature_numerator: " << temperature_numerator(Tg, Tng, scattering_I, dt, st) << std::endl;
-        //std::cout << "temperature_denominator: " << temperature_denominator(Tg, dt, st) << std::endl;
       }
     }
-    //std::cout << "T i: " << i << std::endl;
-    //std::cout << "T A: " << std::endl;
-    //std::cout << A << std::endl;
-    //std::cout << "T rhs: " << std::endl;
-    //std::cout << rhs << std::endl;
     solve_leqn(A, rhs, T_new[i]);
-    //std::cout << "T_new: " << std::endl;
-    //std::cout << T_new[i] << std::endl;
+    //if(i == 0) {
+      //std::cout << "T i: " << i << std::endl;
+      //std::cout << "T A: " << std::endl;
+      //std::cout << A << std::endl;
+      //std::cout << "T rhs: " << std::endl;
+      //std::cout << rhs << std::endl;
+      //std::cout << "T_new: " << std::endl;
+      //std::cout << T_new[i] << std::endl;
+    //}
 
     if(PP_limiter == 1) {//perform PP limiter
       do_scaling_limiter(T_new[i]);
     }
   }
-  return cal_norm_I(I, I_new, 10);
+  return cal_norm_T(T, T_new, 10);
 }
 
 void DGFEMSpace1D::RAD_BE_unsteady_ite(const SOL& In, const SOL& I, const VEC<EVEC>& Tn, const VEC<EVEC>& T,
@@ -187,8 +198,10 @@ void DGFEMSpace1D::RAD_BE_unsteady_ite(const SOL& In, const SOL& I, const VEC<EV
   I2 = I;
   while ( res_I > tol_I && ite_I < MAXITE ) {//ISI iteration
     res_I = RAD_BE_unsteady(In, I2, Tn, T, sigma_t, q, t, dt, I_new, BL, BR);
+    if(alpha >= 0) {
+      minmod_limiter::run(I_new, h);
+    }
     I2 = I_new;
-    //minmod_limiter::run(I1, h);
     std::cout << "ite_I: " << ++ite_I << ", res_I: " << res_I << std::endl;
   }
 }
@@ -198,10 +211,12 @@ void DGFEMSpace1D::temperature_ite(const SOL& I_new, const VEC<EVEC>& Tn,
   double res_T = 1;
   u_int ite_T = 0;
   T2 = T;
-  while ( res_T > tol_T && ite_T < MAXITE ) {//Newton iteration
-    res_T = temperature(I, Tn, T2, dt, sigma_t, T_new);
+  while ( res_T > tol_T && ite_T < 1) {//Newton iteration
+    res_T = temperature(I_new, Tn, T2, dt, sigma_t, T_new);
+    if(alpha >= 0) {
+      minmod_limiter::run(T_new, h);
+    }
     T2 = T_new;
-    //minmod_limiter::run(T1, h);
     std::cout << "ite_T: " << ++ite_T << ", res_T: " << res_T << std::endl;
   }
 }
@@ -209,23 +224,41 @@ void DGFEMSpace1D::temperature_ite(const SOL& I_new, const VEC<EVEC>& Tn,
 void DGFEMSpace1D::run_unsteady(func sigma_t, func q, func BL, func BR, double t_end) {
   double t(0), dt(0);
   In = I; Tn = T;
+  u_int IT(0);
   //std::cout << "Conservation: " << 2./c*Composition(I,0,0.5*(mesh[0]+mesh[1]))[0]
   //+Cv*Composition(T,0, 0.5*(mesh[0]+mesh[1]))<< std::endl;
+  //while (t < t_end && IT < 1) {
   while (t < t_end) {
     double res = 1;
     u_int ite= 0;
+    //std::cout << "begin" << std::endl;
+    //std::cout << "I" << std::endl;
+    //std::cout << I << std::endl;
+    //std::cout << "begin" << std::endl;
+    //std::cout << "T" << std::endl;
+    //std::cout << T << std::endl;
     while ( res > TOL && ite < MAXITE ) {//for a time step
       dt = cal_dt(I);
       dt = std::min(dt, t_end-t);
       RAD_BE_unsteady_ite(In, I, Tn, T, sigma_t, q, t, dt, I1, BL, BR);
+      //std::cout << "ite_I" << std::endl;
+      //std::cout << "I" << std::endl;
+      //std::cout << I1 << std::endl;
       temperature_ite(I1, Tn, T, dt, sigma_t, T1);
+      //std::cout << "one ite_T" << std::endl;
+      //std::cout << "T" << std::endl;
+      //std::cout << T1 << std::endl;
       res = cal_norm(I, I1, T, T1, 10);
-      I = I1; T = T1;
+      I = I1;
+      T = T1;
       std::cout << "ite: " << ++ite << ", res: " << res << std::endl;
     }
     t += dt;
     In = I; Tn = T;
+    //std::cout << In << std::endl;
+    //std::cout << Tn << std::endl;
     std::cout << "t: " << t << ", dt: " << dt << std::endl;
+    IT++;
   }
 }
 

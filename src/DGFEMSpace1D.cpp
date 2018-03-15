@@ -216,8 +216,9 @@ void DGFEMSpace1D::init(func I0, funcT T0) {
 }
 
 double DGFEMSpace1D::cal_dt(const SOL& I) {
-  //return 5.75e-5;
+  //return (mesh[1]-mesh[0])/c*0.5;
   return 5.75e-6;
+  //return 5.75e-8;
 }
 
 int DGFEMSpace1D::forward_one_step_unsteady(const SOL& In, const SOL& I, const VEC<EVEC>& Tn, const VEC<EVEC>& T,
